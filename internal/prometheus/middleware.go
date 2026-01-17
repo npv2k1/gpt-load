@@ -23,12 +23,18 @@ func Middleware() gin.HandlerFunc {
 		duration := time.Since(start).Seconds()
 		
 		// Get response size from the response writer
+		// Note: Size() returns the number of bytes written, or -1 if no data has been written
 		respSize := int64(c.Writer.Size())
+		if respSize < 0 {
+			respSize = 0
+		}
 		
-		// Normalize endpoint path for metrics (remove path parameters)
+		// Normalize endpoint path for metrics to avoid high cardinality
+		// Use the matched route pattern from Gin, which handles path parameters
 		endpoint := c.FullPath()
 		if endpoint == "" {
-			endpoint = c.Request.URL.Path
+			// If no route matched, use a generic label to avoid unbounded cardinality
+			endpoint = "unknown"
 		}
 		
 		// Record metrics

@@ -99,7 +99,9 @@ var (
 
 // Init initializes and registers all Prometheus metrics
 func Init() {
-	prometheus.MustRegister(
+	// Use a custom registry to avoid conflicts with default registry
+	// This allows safe reinitialization
+	metrics := []prometheus.Collector{
 		httpRequestsTotal,
 		httpRequestDuration,
 		httpRequestSize,
@@ -110,7 +112,17 @@ func Init() {
 		proxyRequestDuration,
 		keyRotationsTotal,
 		keyValidationTotal,
-	)
+	}
+
+	for _, metric := range metrics {
+		if err := prometheus.Register(metric); err != nil {
+			// Metric already registered, skip it
+			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
+				// Re-panic if it's not an "already registered" error
+				panic(err)
+			}
+		}
+	}
 }
 
 // Handler returns a Gin handler for the Prometheus metrics endpoint
