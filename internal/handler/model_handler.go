@@ -2,7 +2,6 @@
 package handler
 
 import (
-	"net/http"
 	"strconv"
 	"time"
 
@@ -40,23 +39,27 @@ func (s *Server) FetchModels(c *gin.Context) {
 	}
 
 	// Get the group
-	group, err := s.GroupManager.GetGroup(req.GroupID)
-	if err != nil {
-		response.ErrorI18n(c, app_errors.ErrGroupNotFound, "group.group_not_found")
+	var group models.Group
+	if err := s.DB.First(&group, req.GroupID).Error; err != nil {
+		response.ErrorI18nFromAPIError(c, app_errors.ParseDBError(err), "group.group_not_found")
 		return
 	}
 
+	// Get the effective config for the group
+	effectiveConfig := s.SettingsManager.GetEffectiveConfig(group.Config)
+	group.EffectiveConfig = effectiveConfig
+
 	// Get an active API key for this group
 	var apiKey models.APIKey
-	err = s.DB.Where("group_id = ? AND status = ?", req.GroupID, models.KeyStatusActive).
+	err := s.DB.Where("group_id = ? AND status = ?", req.GroupID, models.KeyStatusActive).
 		First(&apiKey).Error
 	if err != nil {
-		response.ErrorI18n(c, app_errors.ErrNoActiveKeys, "key.no_active_keys")
+		response.ErrorI18nFromAPIError(c, app_errors.ErrNoActiveKeys, "key.no_active_keys")
 		return
 	}
 
 	// Fetch and store models
-	if err := s.ModelService.FetchAndStoreModels(c.Request.Context(), group, &apiKey); err != nil {
+	if err := s.ModelService.FetchAndStoreModels(c.Request.Context(), &group, &apiKey); err != nil {
 		logrus.WithError(err).Error("Failed to fetch models")
 		response.Error(c, app_errors.NewAPIError(app_errors.ErrInternalServer, "Failed to fetch models: "+err.Error()))
 		return
@@ -80,7 +83,7 @@ func (s *Server) ListModels(c *gin.Context) {
 	groupIDStr := c.Param("groupId")
 	groupID, err := strconv.ParseUint(groupIDStr, 10, 64)
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidInput, "Invalid group ID"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_group_id")
 		return
 	}
 
@@ -101,13 +104,13 @@ func (s *Server) GetModel(c *gin.Context) {
 	modelIDStr := c.Param("modelId")
 	modelID, err := strconv.ParseUint(modelIDStr, 10, 64)
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidInput, "Invalid model ID"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_model_id")
 		return
 	}
 
 	capability, err := s.ModelService.GetModelByID(uint(modelID))
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrNotFound, "Model not found"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrResourceNotFound, "model.model_not_found")
 		return
 	}
 
@@ -119,7 +122,7 @@ func (s *Server) UpdateModel(c *gin.Context) {
 	modelIDStr := c.Param("modelId")
 	modelID, err := strconv.ParseUint(modelIDStr, 10, 64)
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidInput, "Invalid model ID"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_model_id")
 		return
 	}
 
@@ -160,7 +163,7 @@ func (s *Server) UpdateModel(c *gin.Context) {
 	// Get the updated model
 	capability, err := s.ModelService.GetModelByID(uint(modelID))
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrNotFound, "Model not found"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrResourceNotFound, "model.model_not_found")
 		return
 	}
 
@@ -172,7 +175,7 @@ func (s *Server) DeleteModel(c *gin.Context) {
 	modelIDStr := c.Param("modelId")
 	modelID, err := strconv.ParseUint(modelIDStr, 10, 64)
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidInput, "Invalid model ID"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_model_id")
 		return
 	}
 
@@ -191,29 +194,33 @@ func (s *Server) RefreshModels(c *gin.Context) {
 	groupIDStr := c.Param("groupId")
 	groupID, err := strconv.ParseUint(groupIDStr, 10, 64)
 	if err != nil {
-		response.Error(c, app_errors.NewAPIError(app_errors.ErrInvalidInput, "Invalid group ID"))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_group_id")
 		return
 	}
 
 	// Get the group
-	group, err := s.GroupManager.GetGroup(uint(groupID))
-	if err != nil {
-		response.ErrorI18n(c, app_errors.ErrGroupNotFound, "group.group_not_found")
+	var group models.Group
+	if err := s.DB.First(&group, groupID).Error; err != nil {
+		response.ErrorI18nFromAPIError(c, app_errors.ParseDBError(err), "group.group_not_found")
 		return
 	}
+
+	// Get the effective config for the group
+	effectiveConfig := s.SettingsManager.GetEffectiveConfig(group.Config)
+	group.EffectiveConfig = effectiveConfig
 
 	// Get an active API key for this group
 	var apiKey models.APIKey
 	err = s.DB.Where("group_id = ? AND status = ?", groupID, models.KeyStatusActive).
 		First(&apiKey).Error
 	if err != nil {
-		response.ErrorI18n(c, app_errors.ErrNoActiveKeys, "key.no_active_keys")
+		response.ErrorI18nFromAPIError(c, app_errors.ErrNoActiveKeys, "key.no_active_keys")
 		return
 	}
 
 	// Refresh models (24 hours staleness)
 	staleDuration := 24 * time.Hour
-	if err := s.ModelService.RefreshStaleModels(c.Request.Context(), group, &apiKey, staleDuration); err != nil {
+	if err := s.ModelService.RefreshStaleModels(c.Request.Context(), &group, &apiKey, staleDuration); err != nil {
 		logrus.WithError(err).Error("Failed to refresh models")
 		response.Error(c, app_errors.NewAPIError(app_errors.ErrInternalServer, "Failed to refresh models: "+err.Error()))
 		return
