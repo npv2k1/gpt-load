@@ -28,11 +28,8 @@ func Middleware() gin.HandlerFunc {
 		reqSize := computeApproximateRequestSize(c.Request)
 		
 		// Get response size from the response writer
-		// Note: Size() returns the number of bytes written, or -1 if no data has been written
-		respSize := int64(c.Writer.Size())
-		if respSize < 0 {
-			respSize = 0
-		}
+		// Size() returns -1 if no data has been written, normalize to 0
+		respSize := max(0, int64(c.Writer.Size()))
 		
 		// Normalize endpoint path for metrics to avoid high cardinality
 		// Use the matched route pattern from Gin, which handles path parameters

@@ -136,7 +136,10 @@ func Handler() gin.HandlerFunc {
 	}
 }
 
-// RecordHTTPRequest records HTTP request metrics
+// RecordHTTPRequest records HTTP request metrics.
+// Note: Request and response size metrics are only recorded when size > 0 to avoid
+// histogram noise from zero-value entries. This is intentional - most metrics systems
+// benefit from excluding truly empty requests/responses as they don't provide useful insights.
 func RecordHTTPRequest(method, endpoint string, status int, duration float64, reqSize, respSize int64) {
 	statusStr := strconv.Itoa(status)
 	httpRequestsTotal.WithLabelValues(method, endpoint, statusStr).Inc()
