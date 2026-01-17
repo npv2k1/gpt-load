@@ -40,7 +40,8 @@ func (s *ModelService) FetchAndStoreModels(ctx context.Context, group *models.Gr
 	}
 
 	if len(capabilities) == 0 {
-		return fmt.Errorf("no models returned from provider")
+		logrus.WithField("group_id", group.ID).Warn("No models returned from provider")
+		return nil // Not an error, just log and continue
 	}
 
 	// Store or update models in database

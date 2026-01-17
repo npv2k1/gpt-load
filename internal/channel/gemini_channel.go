@@ -173,7 +173,18 @@ func (ch *GeminiChannel) FetchModels(ctx context.Context, apiKey *models.APIKey,
 	if err != nil {
 		return nil, fmt.Errorf("failed to create models path: %w", err)
 	}
-	reqURL += "?key=" + apiKey.KeyValue
+	
+	// Parse the URL to properly add query parameters
+	parsedURL, err := url.Parse(reqURL)
+	if err != nil {
+		return nil, fmt.Errorf("failed to parse models URL: %w", err)
+	}
+	
+	// Add API key as query parameter
+	q := parsedURL.Query()
+	q.Set("key", apiKey.KeyValue)
+	parsedURL.RawQuery = q.Encode()
+	reqURL = parsedURL.String()
 
 	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
 	if err != nil {

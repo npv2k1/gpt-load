@@ -204,7 +204,7 @@ type GroupHourlyStat struct {
 	UpdatedAt    time.Time `json:"updated_at"`
 }
 
-// ModelCapabilities 对应 model_capabilities 表，用于存储模型的能力配置
+// ModelCapabilities represents the capabilities table for storing model information and features
 type ModelCapabilities struct {
 	ID                  uint           `gorm:"primaryKey;autoIncrement" json:"id"`
 	GroupID             uint           `gorm:"not null;index" json:"group_id"`

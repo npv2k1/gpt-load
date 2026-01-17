@@ -218,8 +218,16 @@ func (s *Server) RefreshModels(c *gin.Context) {
 		return
 	}
 
-	// Refresh models (24 hours staleness)
-	staleDuration := 24 * time.Hour
+	// Get staleness duration from query parameter, default to 24 hours
+	staleDurationHours := 24
+	if hoursStr := c.Query("stale_hours"); hoursStr != "" {
+		if hours, err := strconv.Atoi(hoursStr); err == nil && hours > 0 {
+			staleDurationHours = hours
+		}
+	}
+	staleDuration := time.Duration(staleDurationHours) * time.Hour
+
+	// Refresh models
 	if err := s.ModelService.RefreshStaleModels(c.Request.Context(), &group, &apiKey, staleDuration); err != nil {
 		logrus.WithError(err).Error("Failed to refresh models")
 		response.Error(c, app_errors.NewAPIError(app_errors.ErrInternalServer, "Failed to refresh models: "+err.Error()))
