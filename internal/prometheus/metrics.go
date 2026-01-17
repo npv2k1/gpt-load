@@ -2,6 +2,8 @@
 package prometheus
 
 import (
+	"errors"
+	"fmt"
 	"strconv"
 
 	"github.com/gin-gonic/gin"
@@ -97,10 +99,9 @@ var (
 	)
 )
 
-// Init initializes and registers all Prometheus metrics
-func Init() {
-	// Use a custom registry to avoid conflicts with default registry
-	// This allows safe reinitialization
+// Init initializes and registers all Prometheus metrics.
+// It's safe to call this multiple times - already registered metrics will be skipped.
+func Init() error {
 	metrics := []prometheus.Collector{
 		httpRequestsTotal,
 		httpRequestDuration,
@@ -116,13 +117,15 @@ func Init() {
 
 	for _, metric := range metrics {
 		if err := prometheus.Register(metric); err != nil {
-			// Metric already registered, skip it
-			if _, ok := err.(prometheus.AlreadyRegisteredError); !ok {
-				// Re-panic if it's not an "already registered" error
-				panic(err)
+			// Check if metric is already registered - this is expected and safe to ignore
+			var alreadyRegisteredErr prometheus.AlreadyRegisteredError
+			if !errors.As(err, &alreadyRegisteredErr) {
+				// Return error for any other registration issues
+				return fmt.Errorf("failed to register Prometheus metric: %w", err)
 			}
 		}
 	}
+	return nil
 }
 
 // Handler returns a Gin handler for the Prometheus metrics endpoint

@@ -49,7 +49,12 @@ func Middleware() gin.HandlerFunc {
 	}
 }
 
-// computeApproximateRequestSize approximates the size of the HTTP request
+// computeApproximateRequestSize returns an approximation of the HTTP request size in bytes.
+// This includes the request line (method + URL + protocol), headers, host, and content body.
+// Note: This is an approximation and may not match the exact wire format size because:
+// - It doesn't account for HTTP/1.1 vs HTTP/2 formatting differences
+// - Header names and values are counted as-is without HTTP wire format overhead
+// - r.Form and r.MultipartForm fields are NOT included in this calculation
 func computeApproximateRequestSize(r *http.Request) int64 {
 	s := int64(0)
 	if r.URL != nil {
@@ -66,8 +71,7 @@ func computeApproximateRequestSize(r *http.Request) int64 {
 	}
 	s += int64(len(r.Host))
 
-	// N.B. r.Form and r.MultipartForm are assumed to be included in r.URL.
-
+	// Add content length if available
 	if r.ContentLength != -1 {
 		s += r.ContentLength
 	}

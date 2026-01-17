@@ -84,7 +84,9 @@ func (a *App) Start() error {
 	logrus.Info("i18n initialized successfully.")
 	
 	// 初始化 Prometheus metrics
-	prommetrics.Init()
+	if err := prommetrics.Init(); err != nil {
+		return fmt.Errorf("failed to initialize Prometheus metrics: %w", err)
+	}
 	logrus.Info("Prometheus metrics initialized successfully.")
 	
 	// Master 节点执行初始化
