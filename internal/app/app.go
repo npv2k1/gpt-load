@@ -13,6 +13,7 @@ import (
 	"gpt-load/internal/i18n"
 	"gpt-load/internal/keypool"
 	"gpt-load/internal/models"
+	prommetrics "gpt-load/internal/prometheus"
 	"gpt-load/internal/proxy"
 	"gpt-load/internal/services"
 	"gpt-load/internal/store"
@@ -81,6 +82,10 @@ func (a *App) Start() error {
 		return fmt.Errorf("failed to initialize i18n: %w", err)
 	}
 	logrus.Info("i18n initialized successfully.")
+	
+	// 初始化 Prometheus metrics
+	prommetrics.Init()
+	logrus.Info("Prometheus metrics initialized successfully.")
 	
 	// Master 节点执行初始化
 	if a.configManager.IsMaster() {
