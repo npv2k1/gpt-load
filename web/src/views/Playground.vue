@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { getGroupList } from "@/api/dashboard";
 import type { Group } from "@/types/models";
-import { NButton, NCard, NInput, NSelect, NSpace, NSpin, useMessage } from "naive-ui";
+import { NButton, NCard, NInput, NSelect, NSpace, useMessage } from "naive-ui";
 import { onMounted, ref } from "vue";
 import { useI18n } from "vue-i18n";
 import http from "@/utils/http";
@@ -16,7 +16,7 @@ const messages = ref<Array<{ role: string; content: string }>>([]);
 const loading = ref(false);
 const loadingGroups = ref(false);
 const modelName = ref("gpt-4o-mini");
-const temperature = ref(0.7);
+const temperature = ref("0.7");
 
 const groupOptions = ref<Array<{ label: string; value: number }>>([]);
 
@@ -29,11 +29,13 @@ async function loadGroups() {
     loadingGroups.value = true;
     const response = await getGroupList();
     groups.value = response.data;
-    groupOptions.value = groups.value.map(g => ({
-      label: `${g.display_name || g.name} (${g.name})`,
-      value: g.id,
-    }));
-    if (groups.value.length > 0) {
+    groupOptions.value = groups.value
+      .filter(g => g.id !== undefined)
+      .map(g => ({
+        label: `${g.display_name || g.name} (${g.name})`,
+        value: g.id as number,
+      }));
+    if (groups.value.length > 0 && groups.value[0].id !== undefined) {
       selectedGroupId.value = groups.value[0].id;
     }
   } catch (error) {
@@ -66,7 +68,6 @@ async function sendMessage() {
     content: userMessage.value,
   });
 
-  const currentMessage = userMessage.value;
   userMessage.value = "";
   loading.value = true;
 
@@ -75,7 +76,7 @@ async function sendMessage() {
       group_name: selectedGroup.name,
       model: modelName.value,
       messages: messages.value,
-      temperature: temperature.value,
+      temperature: parseFloat(temperature.value) || 0.7,
     });
 
     if (response.data && response.data.content) {
@@ -127,10 +128,6 @@ function clearMessages() {
             <n-input
               v-model:value="temperature"
               :placeholder="t('playground.temperature')"
-              type="number"
-              :min="0"
-              :max="2"
-              :step="0.1"
               style="width: 120px"
             />
           </n-space>

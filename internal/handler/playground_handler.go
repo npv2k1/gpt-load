@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"encoding/json"
 	"fmt"
+	app_errors "gpt-load/internal/errors"
 	"gpt-load/internal/models"
 	"gpt-load/internal/response"
 	"io"
@@ -13,6 +14,12 @@ import (
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
 )
+
+// Upstream represents an upstream server configuration
+type Upstream struct {
+	URL    string `json:"url"`
+	Weight int    `json:"weight"`
+}
 
 // PlaygroundChatRequest represents the chat request from playground
 type PlaygroundChatRequest struct {
@@ -32,30 +39,31 @@ type PlaygroundChatResponse struct {
 func (s *Server) PlaygroundChat(c *gin.Context) {
 	var req PlaygroundChatRequest
 	if err := c.ShouldBindJSON(&req); err != nil {
-		response.Error(c, http.StatusBadRequest, "Invalid request format")
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "validation.invalid_request")
 		return
 	}
 
 	// Find the group
 	var group models.Group
 	if err := s.DB.Where("name = ?", req.GroupName).First(&group).Error; err != nil {
-		response.Error(c, http.StatusNotFound, fmt.Sprintf("Group '%s' not found", req.GroupName))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrResourceNotFound, "group.not_found")
 		return
 	}
 
-	// Get the first upstream from the group
-	if len(group.Upstreams) == 0 {
-		response.Error(c, http.StatusBadRequest, "Group has no upstreams configured")
+	// Parse upstreams from JSON
+	var upstreams []Upstream
+	if err := json.Unmarshal(group.Upstreams, &upstreams); err != nil || len(upstreams) == 0 {
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadRequest, "group.no_upstreams")
 		return
 	}
 
-	upstream := group.Upstreams[0]
+	upstream := upstreams[0]
 
 	// Get an API key from the group
 	var apiKey models.APIKey
 	if err := s.DB.Where("group_id = ? AND status = ?", group.ID, models.KeyStatusActive).
 		Order("RANDOM()").First(&apiKey).Error; err != nil {
-		response.Error(c, http.StatusInternalServerError, "No active API keys available in this group")
+		response.ErrorI18nFromAPIError(c, app_errors.ErrNoActiveKeys, "keys.no_active_keys")
 		return
 	}
 
@@ -63,7 +71,7 @@ func (s *Server) PlaygroundChat(c *gin.Context) {
 	decryptedKey, err := s.EncryptionSvc.Decrypt(apiKey.KeyValue)
 	if err != nil {
 		logrus.WithError(err).Error("Failed to decrypt API key")
-		response.Error(c, http.StatusInternalServerError, "Failed to decrypt API key")
+		response.ErrorI18nFromAPIError(c, app_errors.ErrInternalServer, "encryption.decrypt_failed")
 		return
 	}
 
@@ -84,7 +92,7 @@ func (s *Server) PlaygroundChat(c *gin.Context) {
 	}
 
 	if apiErr != nil {
-		response.Error(c, http.StatusInternalServerError, fmt.Sprintf("API call failed: %s", apiErr.Error()))
+		response.ErrorI18nFromAPIError(c, app_errors.ErrBadGateway, "api.call_failed")
 		return
 	}
 
