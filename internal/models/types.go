@@ -203,3 +203,22 @@ type GroupHourlyStat struct {
 	CreatedAt    time.Time `json:"created_at"`
 	UpdatedAt    time.Time `json:"updated_at"`
 }
+
+// ModelCapabilities 对应 model_capabilities 表，用于存储模型的能力配置
+type ModelCapabilities struct {
+	ID                  uint           `gorm:"primaryKey;autoIncrement" json:"id"`
+	GroupID             uint           `gorm:"not null;index" json:"group_id"`
+	ModelID             string         `gorm:"type:varchar(255);not null;index" json:"model_id"`
+	ModelName           string         `gorm:"type:varchar(255);not null" json:"model_name"`
+	SupportsStreaming   bool           `gorm:"default:false" json:"supports_streaming"`
+	SupportsVision      bool           `gorm:"default:false" json:"supports_vision"`
+	SupportsFunctions   bool           `gorm:"default:false" json:"supports_functions"`
+	MaxTokens           *int           `json:"max_tokens"`
+	MaxInputTokens      *int           `json:"max_input_tokens"`
+	MaxOutputTokens     *int           `json:"max_output_tokens"`
+	CustomCapabilities  datatypes.JSON `gorm:"type:json" json:"custom_capabilities"`
+	IsAutoFetched       bool           `gorm:"default:false" json:"is_auto_fetched"`
+	LastFetchedAt       *time.Time     `json:"last_fetched_at"`
+	CreatedAt           time.Time      `json:"created_at"`
+	UpdatedAt           time.Time      `json:"updated_at"`
+}

@@ -12,6 +12,7 @@ import (
 	"net/http"
 	"net/url"
 	"strings"
+	"time"
 
 	"github.com/gin-gonic/gin"
 	"github.com/sirupsen/logrus"
@@ -158,6 +159,106 @@ func (ch *GeminiChannel) ValidateKey(ctx context.Context, apiKey *models.APIKey,
 	parsedError := app_errors.ParseUpstreamError(errorBody)
 
 	return false, fmt.Errorf("[status %d] %s", resp.StatusCode, parsedError)
+}
+
+// FetchModels fetches available models from the Gemini provider.
+func (ch *GeminiChannel) FetchModels(ctx context.Context, apiKey *models.APIKey, group *models.Group) ([]models.ModelCapabilities, error) {
+	upstreamURL := ch.getUpstreamURL()
+	if upstreamURL == nil {
+		return nil, fmt.Errorf("no upstream URL configured for channel %s", ch.Name)
+	}
+
+	// Build the models list endpoint URL
+	reqURL, err := url.JoinPath(upstreamURL.String(), "v1beta", "models")
+	if err != nil {
+		return nil, fmt.Errorf("failed to create models path: %w", err)
+	}
+	reqURL += "?key=" + apiKey.KeyValue
+
+	req, err := http.NewRequestWithContext(ctx, "GET", reqURL, nil)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create models request: %w", err)
+	}
+	req.Header.Set("Content-Type", "application/json")
+
+	// Apply custom header rules if available
+	if len(group.HeaderRuleList) > 0 {
+		headerCtx := utils.NewHeaderVariableContext(group, apiKey)
+		utils.ApplyHeaderRules(req, group.HeaderRuleList, headerCtx)
+	}
+
+	resp, err := ch.HTTPClient.Do(req)
+	if err != nil {
+		return nil, fmt.Errorf("failed to send models request: %w", err)
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		errorBody, _ := io.ReadAll(resp.Body)
+		parsedError := app_errors.ParseUpstreamError(errorBody)
+		return nil, fmt.Errorf("failed to fetch models [status %d]: %s", resp.StatusCode, parsedError)
+	}
+
+	bodyBytes, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return nil, fmt.Errorf("failed to read models response: %w", err)
+	}
+
+	var response struct {
+		Models []struct {
+			Name                       string   `json:"name"`
+			DisplayName                string   `json:"displayName"`
+			SupportedGenerationMethods []string `json:"supportedGenerationMethods"`
+			InputTokenLimit            int      `json:"inputTokenLimit"`
+			OutputTokenLimit           int      `json:"outputTokenLimit"`
+		} `json:"models"`
+	}
+
+	if err := json.Unmarshal(bodyBytes, &response); err != nil {
+		return nil, fmt.Errorf("failed to parse models response: %w", err)
+	}
+
+	capabilities := make([]models.ModelCapabilities, 0, len(response.Models))
+	now := time.Now()
+
+	for _, model := range response.Models {
+		// Extract clean model ID
+		modelID := strings.TrimPrefix(model.Name, "models/")
+
+		capability := models.ModelCapabilities{
+			GroupID:       group.ID,
+			ModelID:       modelID,
+			ModelName:     model.DisplayName,
+			IsAutoFetched: true,
+			LastFetchedAt: &now,
+		}
+
+		// Set capabilities based on supported generation methods
+		for _, method := range model.SupportedGenerationMethods {
+			if method == "generateContent" || method == "streamGenerateContent" {
+				capability.SupportsStreaming = true
+			}
+		}
+
+		// Set token limits if available
+		if model.InputTokenLimit > 0 {
+			inputTokens := model.InputTokenLimit
+			capability.MaxInputTokens = &inputTokens
+		}
+		if model.OutputTokenLimit > 0 {
+			outputTokens := model.OutputTokenLimit
+			capability.MaxOutputTokens = &outputTokens
+		}
+
+		// Check for vision support
+		if strings.Contains(strings.ToLower(modelID), "vision") || strings.Contains(strings.ToLower(modelID), "pro-vision") {
+			capability.SupportsVision = true
+		}
+
+		capabilities = append(capabilities, capability)
+	}
+
+	return capabilities, nil
 }
 
 // ApplyModelRedirect overrides the default implementation for Gemini channel.

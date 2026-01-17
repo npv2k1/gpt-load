@@ -40,4 +40,7 @@ type ChannelProxy interface {
 
 	// TransformModelList transforms the model list response based on redirect rules.
 	TransformModelList(req *http.Request, bodyBytes []byte, group *models.Group) (map[string]any, error)
+
+	// FetchModels fetches available models from the upstream provider.
+	FetchModels(ctx context.Context, apiKey *models.APIKey, group *models.Group) ([]models.ModelCapabilities, error)
 }
