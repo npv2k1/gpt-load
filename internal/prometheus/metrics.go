@@ -141,6 +141,7 @@ func RecordHTTPRequest(method, endpoint string, status int, duration float64, re
 	statusStr := strconv.Itoa(status)
 	httpRequestsTotal.WithLabelValues(method, endpoint, statusStr).Inc()
 	httpRequestDuration.WithLabelValues(method, endpoint, statusStr).Observe(duration)
+	// Only record size metrics when there's actual data to avoid zero-value noise in histograms
 	if reqSize > 0 {
 		httpRequestSize.WithLabelValues(method, endpoint).Observe(float64(reqSize))
 	}

@@ -8,19 +8,24 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
+const (
+	// unknownEndpoint is used as the endpoint label when no route is matched
+	unknownEndpoint = "unknown"
+)
+
 // Middleware returns a Gin middleware that collects HTTP metrics for Prometheus
 func Middleware() gin.HandlerFunc {
 	return func(c *gin.Context) {
 		start := time.Now()
-		
-		// Get request size
-		reqSize := computeApproximateRequestSize(c.Request)
 		
 		// Process request
 		c.Next()
 		
 		// Calculate duration
 		duration := time.Since(start).Seconds()
+		
+		// Get request and response sizes
+		reqSize := computeApproximateRequestSize(c.Request)
 		
 		// Get response size from the response writer
 		// Note: Size() returns the number of bytes written, or -1 if no data has been written
@@ -34,7 +39,7 @@ func Middleware() gin.HandlerFunc {
 		endpoint := c.FullPath()
 		if endpoint == "" {
 			// If no route matched, use a generic label to avoid unbounded cardinality
-			endpoint = "unknown"
+			endpoint = unknownEndpoint
 		}
 		
 		// Record metrics
