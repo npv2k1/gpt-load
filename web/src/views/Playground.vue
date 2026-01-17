@@ -63,6 +63,13 @@ async function sendMessage() {
     return;
   }
 
+  // Validate temperature
+  const tempValue = parseFloat(temperature.value) || 0.7;
+  if (tempValue < 0 || tempValue > 2) {
+    message.warning(t("playground.invalidTemperature"));
+    return;
+  }
+
   messages.value.push({
     role: "user",
     content: userMessage.value,
@@ -76,7 +83,7 @@ async function sendMessage() {
       group_name: selectedGroup.name,
       model: modelName.value,
       messages: messages.value,
-      temperature: parseFloat(temperature.value) || 0.7,
+      temperature: tempValue,
     });
 
     if (response.data && response.data.content) {

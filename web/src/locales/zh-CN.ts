@@ -622,5 +622,6 @@ export default {
     groupNotFound: "分组未找到",
     failedToLoadGroups: "加载分组失败",
     failedToSendMessage: "发送消息失败",
+    invalidTemperature: "温度必须在 0 到 2 之间",
   },
 };

@@ -640,5 +640,6 @@ export default {
     groupNotFound: "グループが見つかりません",
     failedToLoadGroups: "グループの読み込みに失敗しました",
     failedToSendMessage: "メッセージの送信に失敗しました",
+    invalidTemperature: "Temperatureは0から2の間である必要があります",
   },
 };

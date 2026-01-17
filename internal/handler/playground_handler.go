@@ -59,13 +59,16 @@ func (s *Server) PlaygroundChat(c *gin.Context) {
 
 	upstream := upstreams[0]
 
-	// Get an API key from the group
-	var apiKey models.APIKey
+	// Get an API key from the group - use a portable approach
+	var apiKeys []models.APIKey
 	if err := s.DB.Where("group_id = ? AND status = ?", group.ID, models.KeyStatusActive).
-		Order("RANDOM()").First(&apiKey).Error; err != nil {
+		Limit(10).Find(&apiKeys).Error; err != nil || len(apiKeys) == 0 {
 		response.ErrorI18nFromAPIError(c, app_errors.ErrNoActiveKeys, "keys.no_active_keys")
 		return
 	}
+
+	// Randomly select one key from the result
+	apiKey := apiKeys[time.Now().UnixNano()%int64(len(apiKeys))]
 
 	// Decrypt the API key
 	decryptedKey, err := s.EncryptionSvc.Decrypt(apiKey.KeyValue)
@@ -164,8 +167,16 @@ func (s *Server) callGemini(baseURL, apiKey string, req PlaygroundChatRequest) (
 	var contents []map[string]interface{}
 	for _, msg := range req.Messages {
 		role := "user"
-		if msgRole, ok := msg["role"].(string); ok && msgRole == "assistant" {
-			role = "model"
+		if msgRole, ok := msg["role"].(string); ok {
+			switch msgRole {
+			case "assistant":
+				role = "model"
+			case "system":
+				// System messages can be prepended to user messages in Gemini
+				continue // Skip for now, or could be prepended to next user message
+			default:
+				role = "user"
+			}
 		}
 		if content, ok := msg["content"].(string); ok {
 			contents = append(contents, map[string]interface{}{

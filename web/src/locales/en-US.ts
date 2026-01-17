@@ -639,5 +639,6 @@ export default {
     groupNotFound: "Group not found",
     failedToLoadGroups: "Failed to load groups",
     failedToSendMessage: "Failed to send message",
+    invalidTemperature: "Temperature must be between 0 and 2",
   },
 };
