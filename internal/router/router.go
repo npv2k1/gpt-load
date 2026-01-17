@@ -167,6 +167,12 @@ func registerProtectedAPIRoutes(api *gin.RouterGroup, serverHandler *handler.Ser
 		settings.GET("", serverHandler.GetSettings)
 		settings.PUT("", serverHandler.UpdateSettings)
 	}
+
+	// 测试环境 (Playground)
+	playground := api.Group("/playground")
+	{
+		playground.POST("/chat", serverHandler.PlaygroundChat)
+	}
 }
 
 // registerProxyRoutes 注册代理路由
