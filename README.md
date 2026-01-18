@@ -22,7 +22,7 @@ For detailed documentation, please visit [Official Documentation](https://www.gp
 - **Dynamic Configuration**: System settings and group configurations support hot-reload without requiring restarts
 - **Enterprise Architecture**: Distributed leader-follower deployment supporting horizontal scaling and high availability
 - **Modern Management**: Vue 3-based web management interface that is intuitive and user-friendly
-- **Comprehensive Monitoring**: Real-time statistics, health checks, and detailed request logging
+- **Comprehensive Monitoring**: Real-time statistics, health checks, detailed request logging, and Prometheus metrics for observability
 - **High-Performance Design**: Zero-copy streaming, connection pool reuse, and atomic operations
 - **Production Ready**: Graceful shutdown, error recovery, and comprehensive security mechanisms
 - **Dual Authentication**: Separate authentication for management and proxy, with proxy authentication supporting global and group-level keys
@@ -558,6 +558,30 @@ response = client.messages.create(
 > **Important Note**: As a transparent proxy service, GPT-Load completely preserves the native API formats and authentication methods of various AI services. You only need to replace the endpoint address and use the **Proxy Key** configured in the management interface for seamless migration.
 
 </details>
+
+## Monitoring and Observability
+
+GPT-Load includes built-in Prometheus metrics for comprehensive monitoring and observability.
+
+### Prometheus Metrics
+
+Access the metrics endpoint at `http://localhost:3001/metrics` to get Prometheus-formatted metrics including:
+
+- **HTTP Metrics**: Request rates, durations, and sizes for all endpoints
+- **Application Metrics**: Active/invalid key counts, proxy request performance, key rotation events
+
+For detailed documentation on available metrics, Prometheus configuration, and example queries, see [Prometheus Monitoring Documentation](docs/PROMETHEUS.md).
+
+### Example Prometheus Configuration
+
+```yaml
+scrape_configs:
+  - job_name: 'gpt-load'
+    static_configs:
+      - targets: ['localhost:3001']
+    metrics_path: '/metrics'
+    scrape_interval: 15s
+```
 
 ## Related Projects
 
