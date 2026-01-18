@@ -644,6 +644,7 @@ export default {
     delete_failed: "删除模型失败",
     delete_confirm_title: "删除模型",
     delete_confirm_content: "确定要删除模型 '{modelName}' 吗？",
+  },
   playground: {
     title: "LLM 测试环境",
     selectGroup: "选择分组",

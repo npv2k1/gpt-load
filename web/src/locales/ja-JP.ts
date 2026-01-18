@@ -662,6 +662,7 @@ export default {
     delete_failed: "モデルの削除に失敗しました",
     delete_confirm_title: "モデル削除",
     delete_confirm_content: "モデル '{modelName}' を削除してもよろしいですか？",
+  },
   playground: {
     title: "LLM プレイグラウンド",
     selectGroup: "グループを選択",

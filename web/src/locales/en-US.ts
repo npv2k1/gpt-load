@@ -661,6 +661,7 @@ export default {
     delete_failed: "Failed to delete model",
     delete_confirm_title: "Delete Model",
     delete_confirm_content: "Are you sure you want to delete model '{modelName}'?",
+  },
   playground: {
     title: "LLM Playground",
     selectGroup: "Select Group",
