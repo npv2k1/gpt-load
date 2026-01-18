@@ -146,6 +146,17 @@ func registerProtectedAPIRoutes(api *gin.RouterGroup, serverHandler *handler.Ser
 		keys.PUT("/:id/notes", serverHandler.UpdateKeyNotes)
 	}
 
+	// Model Management Routes
+	models := api.Group("/models")
+	{
+		models.POST("/fetch", serverHandler.FetchModels)
+		models.GET("/group/:groupId", serverHandler.ListModels)
+		models.GET("/:modelId", serverHandler.GetModel)
+		models.PUT("/:modelId", serverHandler.UpdateModel)
+		models.DELETE("/:modelId", serverHandler.DeleteModel)
+		models.POST("/group/:groupId/refresh", serverHandler.RefreshModels)
+	}
+
 	// Tasks
 	api.GET("/tasks/status", serverHandler.GetTaskStatus)
 

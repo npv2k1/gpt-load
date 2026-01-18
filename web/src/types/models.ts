@@ -87,6 +87,25 @@ export interface Group {
   updated_at?: string;
 }
 
+// Model capability information
+export interface ModelCapability {
+  id: number;
+  group_id: number;
+  model_id: string;
+  model_name: string;
+  supports_streaming: boolean;
+  supports_vision: boolean;
+  supports_functions: boolean;
+  max_tokens?: number;
+  max_input_tokens?: number;
+  max_output_tokens?: number;
+  custom_capabilities?: Record<string, unknown>;
+  is_auto_fetched: boolean;
+  last_fetched_at?: string;
+  created_at: string;
+  updated_at: string;
+}
+
 export interface GroupConfigOption {
   key: string;
   name: string;
