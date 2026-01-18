@@ -27,6 +27,11 @@ const routes: Array<RouteRecordRaw> = [
         name: "settings",
         component: () => import("@/views/Settings.vue"),
       },
+      {
+        path: "playground",
+        name: "playground",
+        component: () => import("@/views/Playground.vue"),
+      },
     ],
   },
   {
