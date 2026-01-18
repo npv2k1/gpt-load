@@ -5,6 +5,7 @@ import (
 	"gpt-load/internal/handler"
 	"gpt-load/internal/i18n"
 	"gpt-load/internal/middleware"
+	prommetrics "gpt-load/internal/prometheus"
 	"gpt-load/internal/proxy"
 	"gpt-load/internal/services"
 	"gpt-load/internal/types"
@@ -57,6 +58,7 @@ func NewRouter(
 	router.Use(middleware.CORS(configManager.GetCORSConfig()))
 	router.Use(middleware.RateLimiter(configManager.GetPerformanceConfig()))
 	router.Use(middleware.SecurityHeaders())
+	router.Use(prommetrics.Middleware()) // Prometheus metrics middleware
 	startTime := time.Now()
 	router.Use(func(c *gin.Context) {
 		c.Set("serverStartTime", startTime)
@@ -75,6 +77,7 @@ func NewRouter(
 // registerSystemRoutes 注册系统级路由
 func registerSystemRoutes(router *gin.Engine, serverHandler *handler.Server) {
 	router.GET("/health", serverHandler.Health)
+	router.GET("/metrics", prommetrics.Handler()) // Prometheus metrics endpoint
 }
 
 // registerAPIRoutes 注册API路由
@@ -177,6 +180,12 @@ func registerProtectedAPIRoutes(api *gin.RouterGroup, serverHandler *handler.Ser
 	{
 		settings.GET("", serverHandler.GetSettings)
 		settings.PUT("", serverHandler.UpdateSettings)
+	}
+
+	// 测试环境 (Playground)
+	playground := api.Group("/playground")
+	{
+		playground.POST("/chat", serverHandler.PlaygroundChat)
 	}
 }
 
